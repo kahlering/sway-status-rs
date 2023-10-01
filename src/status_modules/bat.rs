@@ -1,28 +1,33 @@
 use std::io::Seek;
-
 use serde_json::from_str;
-
 use crate::status_bar;
 
-use std::io::Write;
+const MODULE_NAME: &str = "battery_module";
+const INSTANCE_NAME: &str = "battery_instance_1";
 
 pub struct BatteryModule{
     f_energy_now: std::fs::File,
     f_energy_full: std::fs::File,
     f_status: std::fs::File,
-    f_power_now: std::fs::File
+    f_power_now: std::fs::File,
+    
 }
 
-
 impl status_bar::StatusModule for BatteryModule{
+    fn get_instance_name(&self) -> Option<String> {
+        Some(String::from(INSTANCE_NAME))
+    }
+
+    fn get_module_name(&self) -> Option<String> {
+        Some(String::from(MODULE_NAME))
+    }
 
     fn init(&mut self){
         
     }
 
     fn handle_event(&self, event: &status_bar::Event) {
-        let mut log = std::fs::File::create("/home/k/log_bat.txt").unwrap();
-        log.write_all("bat event".as_bytes()).expect("failed to write to bat_log");
+        eprintln!("battery event");
     }
 
     fn get_status_block(&mut self) -> status_bar::StatusBlock{
@@ -51,8 +56,8 @@ impl status_bar::StatusModule for BatteryModule{
             min_width: None,
             align: None,
             urgent: None,
-            name: Some(String::from("bat_mod_name")),
-            instance: Some(String::from("bat_mod_instance")),
+            name: Some(String::from(MODULE_NAME)),
+            instance: Some(String::from(INSTANCE_NAME)),
             separator: None,
             separator_block_width: None,
             markup: None

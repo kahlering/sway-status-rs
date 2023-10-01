@@ -7,6 +7,8 @@ pub trait StatusModule: Send + Sync {
     fn get_status_block(&mut self) -> StatusBlock;
     fn init(&mut self);
     fn handle_event(&self, event: &Event);
+    fn get_instance_name(&self) -> Option<String>;
+    fn get_module_name(&self) -> Option<String>;
 }
 
 
@@ -60,24 +62,39 @@ pub enum Button{
     RIGHT = 3,
     LEFT = 1,
     MIDDLE = 2,
+    UNDEF = 4,
+}
+
+impl Default for Button{
+    fn default() -> Self {
+        Self::UNDEF
+    }
 }
 
 
 #[derive(serde::Deserialize)]
 pub struct Event{
+    #[serde(default)]
     pub name: Option<String>,
+    #[serde(default)]
     pub instance: Option<String>,
+    #[serde(default)]
     pub x: isize,
+    #[serde(default)]
     pub y: isize,
-
+    #[serde(default)]
     pub button: Button,
+    #[serde(default)]
     pub relative_x: isize,
+    #[serde(default)]
     pub relative_y: isize,
     #[serde(default)]
     pub output_x: isize,
     #[serde(default)]
     pub output_y: isize,
+    #[serde(default)]
     pub width: isize,
+    #[serde(default)]
     pub height: isize,
     #[serde(default)]
     pub modifiers: Vec<String>
@@ -112,9 +129,9 @@ pub struct StatusBar<'a, 'scope, 'env>{
     //data: std::sync::Arc<std::sync::Mutex<StatusBarData<'a>>>,
     //modules: Vec<&'a mut dyn StatusModule>,
     modules: std::sync::Arc<std::sync::Mutex<Vec<&'a mut dyn StatusModule>>>,
+    free_handles: Vec<usize>,
     status_string: String,
     out: std::io::Stdout,
-    t: std::option::Option<std::thread::JoinHandle<()>>,
     scope: &'a std::thread::Scope<'scope, 'env>,
 }
 
@@ -130,34 +147,24 @@ unsafe impl<'a,'scope, 'env> Send for StatusBar<'a,'scope, 'env> {}
 // }
 
 impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
-    pub fn add_module(&mut self, module: &'a mut impl StatusModule){
+    pub fn add_module(&mut self, module: &'a mut impl StatusModule) -> usize{
         let mut lock = self.modules.lock().expect("mutex poisoned");
-        lock.push(module);
-        //self.modules.push(module);
+        let q2: &mut Vec<&mut dyn StatusModule> = &mut *lock;
+        match self.free_handles.pop(){
+            Some(idx) => {q2[idx]  = module; return idx},
+            None => {lock.push(module); return lock.len() - 1;}
+        }
+    }
+
+    pub fn remove_module(&mut self, handle: usize){ // TODO test
+        self.free_handles.push(handle);
     }
 
     pub fn get_status(&mut self) -> &String{
         &self.status_string
     }
 
-    fn handle_event(&self, event: Event){
-
-    }
-
-    // fn input_thread(&self){
-    //     let mut stdin = std::io::stdin();
-    //     //let mut in_buf: [u8; 200] =[0; 200];
-    //     let mut log = std::fs::File::create("/home/k/log.txt").unwrap();
-    //     let mut buf = String::new();
-    //     loop{
-    //         stdin.read_line(&mut buf).expect("reading line from stdin failed");
-    //         log.write_all(format!("input: {} \n\n", buf).as_bytes()).expect("failed to write to file");
-    //         let event = Event::from_json(buf.as_str());
-    //         buf.clear();
-    //     }
-    // }
-
-    pub fn init(&mut self)
+    fn start_input_event_thread(&mut self)
     where
         'a: 'scope
     {
@@ -165,33 +172,56 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         self.scope.spawn(move ||{
             let stdin = std::io::stdin();
             //let mut in_buf: [u8; 200] =[0; 200];
-            let mut log = std::fs::File::create("/home/k/log.txt").unwrap();
+            //let mut log = std::fs::File::create("/home/k/log.txt").unwrap();
             let mut buf = String::new();
             loop{
                 stdin.read_line(&mut buf).expect("reading line from stdin failed");
-                let input = &buf.as_str()[1..];
-                log.write_all(format!("input:\n {} \n\n", input).as_bytes()).expect("failed to write to file");
-                let event = match Event::from_json(input)  {
-                    Ok(event) => event,
-                    Err(e) => {log.write_all(format!("failed to parse json {}", e).as_bytes()); Event::new()}
-                };
-                let mut l = r.lock().expect("mutex poisoned");
-                for m in l.as_mut_slice(){
-                    m.handle_event(&event);
+                match buf.find('{'){
+                    Some(start_idx) =>{
+                        let input = &buf.as_str()[start_idx..];
+                        eprintln!("start idx: {} buf:\n {} \n\n", start_idx, buf);
+                        match Event::from_json(input)  {
+                            Ok(event) => {
+                                if event.name.as_ref().is_none(){
+                                    continue
+                                }
+                                let mut l = r.lock().expect("mutex poisoned");
+                                for m in l.as_mut_slice(){
+                                    let a = m.get_module_name();
+                                    let b = a == event.name;
+                                    if m.get_module_name() == event.name && m.get_instance_name() == event.instance{ //TODO check if == works as expected on option
+                                        m.handle_event(&event);
+                                    }
+                                }                                   
+                            },
+                            Err(e) => {
+                                eprintln!("failed to parse json: {}", e);
+                            }
+                        };
+                        
+                    }
+                    None => {
+                        eprintln!("could not find {{ in line {}", buf);
+                    }
                 }
                 buf.clear();
             }
         });
     }
 
-    pub fn new(scope: &'a std::thread::Scope<'scope, 'env>) -> StatusBar<'a,'scope, 'env>{
-        StatusBar { 
+    pub fn new(scope: &'a std::thread::Scope<'scope, 'env>) -> StatusBar<'a,'scope, 'env>
+    where
+    'a: 'scope
+    {
+        let mut r = StatusBar { 
             modules: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
             status_string: String::from(""),
             out: std::io::stdout(),
-            t: None,
             scope: scope,
-        }
+            free_handles: Vec::new(),
+        };
+        r.start_input_event_thread();
+        r
     }
 
     pub fn update_status(&mut self){
@@ -205,9 +235,6 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
     }
 
     pub fn write_status_to_stdout(&mut self) -> std::io::Result<()>{
-        //self.out.write_all(self.status_string.as_bytes())?;
-        //self.out.flush()?;
-        //Ok(())
         Self::write_to_stdout(&mut self.out, self.status_string.as_bytes())
     }
 

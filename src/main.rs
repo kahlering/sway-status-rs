@@ -16,45 +16,7 @@ extern "C" {
 }
 
 
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
-
-
-struct Stats<'a>{
-    test: Arc<Mutex<&'a String>>,
-}
-impl<'a> Stats<'a> {
-    fn add_stats(&mut self, _other: &Stats) {}
-}
-
 fn main() {
-
-
-    // //let shared_stats = Arc::new(Mutex::new(Stats{}));
-    // let q1 = String::from("asd");
-    // let stats = Stats{test: Arc::new(Mutex::new(&q1))};
-
-    // let threads = 5;
-    // for _ in 0..threads {
-    //     //let my_stats = stats.test.clone();
-    //     let my_stats = stats.test;
-    //     thread::spawn(move || {
-    //         let mut shared = my_stats.lock().unwrap();
-    //         shared.push_str("asd");
-    //     });
-    //     // Note: Immediately joining, no multithreading happening!
-    //     // THIS WAS A LIE, see below
-    // }
-
-    // loop{
-    //     let mut shared = stats.test.lock().unwrap();
-    //     shared.push_str("asd2");
-    // }
-
-
-
     //unsafe{
     //    set_stdin_nonblocking();
     //}
@@ -70,7 +32,7 @@ fn main() {
         status_bar.add_module(&mut bat_mod);
 
         status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout");
-        status_bar.init();
+        //status_bar.init();
 
         //let mut log = std::fs::File::create("/home/k/log.txt").unwrap();
 
