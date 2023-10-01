@@ -4,6 +4,8 @@ use serde_json::from_str;
 
 use crate::status_bar;
 
+use std::io::Write;
+
 pub struct BatteryModule{
     f_energy_now: std::fs::File,
     f_energy_full: std::fs::File,
@@ -18,8 +20,9 @@ impl status_bar::StatusModule for BatteryModule{
         
     }
 
-    fn click_event(&self) {
-        
+    fn handle_event(&self, event: &status_bar::Event) {
+        let mut log = std::fs::File::create("/home/k/log_bat.txt").unwrap();
+        log.write_all("bat event".as_bytes()).expect("failed to write to bat_log");
     }
 
     fn get_status_block(&mut self) -> status_bar::StatusBlock{

@@ -9,3 +9,4 @@ edition = "2021"
 cty = "*"
 serde = { version = "1.0.188" , features = ["derive"] }
 serde_json = "1.0.96"
+serde_repr = "0.1"
