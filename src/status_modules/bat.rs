@@ -22,12 +22,7 @@ impl status_bar::StatusModule for BatteryModule{
         Some(String::from(MODULE_NAME))
     }
 
-    fn init(&mut self){
-        
-    }
-
-    fn handle_event(&self, event: &status_bar::Event) {
-        eprintln!("battery event");
+    fn handle_event(&self, _event: &status_bar::Event) {
     }
 
     fn get_status_block(&mut self) -> status_bar::StatusBlock{

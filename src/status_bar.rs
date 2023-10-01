@@ -1,11 +1,10 @@
-use std::io::{Write, Read};
+use std::io::{Write};
 use std::str;
 
 
 pub trait StatusModule: Send + Sync {
     //fn get_status_string(&self) -> String;
     fn get_status_block(&mut self) -> StatusBlock;
-    fn init(&mut self);
     fn handle_event(&self, event: &Event);
     fn get_instance_name(&self) -> Option<String>;
     fn get_module_name(&self) -> Option<String>;
@@ -156,7 +155,7 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         }
     }
 
-    pub fn remove_module(&mut self, handle: usize){ // TODO test
+    pub fn remove_module(&mut self, handle: usize){ // TODO test, free handle twice = error, free unused handle = error
         self.free_handles.push(handle);
     }
 
@@ -187,8 +186,6 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
                                 }
                                 let mut l = r.lock().expect("mutex poisoned");
                                 for m in l.as_mut_slice(){
-                                    let a = m.get_module_name();
-                                    let b = a == event.name;
                                     if m.get_module_name() == event.name && m.get_instance_name() == event.instance{ //TODO check if == works as expected on option
                                         m.handle_event(&event);
                                     }
@@ -230,6 +227,7 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         let mut lock = self.modules.lock().expect("mutex poisoned");
         for m in lock.as_mut_slice(){
             self.status_string.push_str(m.get_status_block().to_json_string().as_str());
+            self.status_string.push(',');
         }
         self.status_string.push_str("],\n");
     }
