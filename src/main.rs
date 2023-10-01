@@ -21,13 +21,17 @@ fn main() {
     //}
     
 
-    let mut battery_module = status_modules::bat::BatteryModule::new().expect("failed to create battery module");
-    let mut date_and_time_module = status_modules::date_and_time::DateAndTimeModule::new();
+    
     std::thread::scope(|s|{
         let mut status_bar = status_bar::StatusBar::new(s);
+
+        let battery_module = status_modules::bat::BatteryModule::new().expect("failed to create battery module");
+        let date_and_time_module = status_modules::date_and_time::DateAndTimeModule::new();
         
-        let _bat_handle = status_bar.add_module(&mut battery_module);
-        let _dat_handle = status_bar.add_module(&mut date_and_time_module);
+        let _bat_handle = status_bar.add_module(battery_module);
+        let _dat_handle = status_bar.add_module(date_and_time_module);
+
+        let _a = status_bar.remove_module(_dat_handle);
         
         status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout");
      
