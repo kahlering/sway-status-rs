@@ -2,24 +2,32 @@ use std::io::Seek;
 use serde_json::from_str;
 use crate::status_bar;
 
-const MODULE_NAME: &str = "battery_module";
-const INSTANCE_NAME: &str = "battery_instance_1";
 
 pub struct BatteryModule{
     f_energy_now: std::fs::File,
     f_energy_full: std::fs::File,
     f_status: std::fs::File,
     f_power_now: std::fs::File,
-    
+    module_name: Option<String>,
+    instance: Option<String>,
 }
 
 impl status_bar::StatusModule for BatteryModule{
+    
+    fn configure(&mut self, module_conf: &serde_json::Value) {
+        let name = module_conf["name"].as_str();
+        match name{
+            None => {eprint!("could not read name from config file for battery module"); return;},
+            Some(s) => {self.module_name = Some(String::from(s))}
+        }
+    }
+
     fn get_instance_name(&self) -> Option<String> {
-        Some(String::from(INSTANCE_NAME))
+        self.instance.clone()
     }
 
     fn get_module_name(&self) -> Option<String> {
-        Some(String::from(MODULE_NAME))
+        self.module_name.clone()
     }
 
     fn handle_event(&self, _event: &status_bar::Event) {
@@ -51,8 +59,8 @@ impl status_bar::StatusModule for BatteryModule{
             min_width: None,
             align: None,
             urgent: None,
-            name: Some(String::from(MODULE_NAME)),
-            instance: Some(String::from(INSTANCE_NAME)),
+            name: self.module_name.clone(),
+            instance: self.instance.clone(),
             separator: None,
             separator_block_width: None,
             markup: None
@@ -71,6 +79,8 @@ impl BatteryModule{
             f_energy_full: std::fs::File::open("/sys/class/power_supply/BAT0/energy_full")?,
             f_status: std::fs::File::open("/sys/class/power_supply/BAT0/status")?,
             f_power_now: std::fs::File::open("/sys/class/power_supply/BAT0/power_now")?,
+            module_name: None,
+            instance: None
         })
     }
 }

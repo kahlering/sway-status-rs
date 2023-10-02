@@ -4,7 +4,7 @@ use crate::status_bar::StatusModule;
 
 pub struct StatusBar<'a, 'scope, 'env>{
     modules: std::sync::Arc<std::sync::Mutex<Vec<Box<dyn StatusModule>>>>,
-    free_handles: Vec<usize>,
+    //free_handles: Vec<usize>,
     status_string: String,
     out: std::io::Stdout,
     scope: &'a std::thread::Scope<'scope, 'env>,
@@ -14,22 +14,23 @@ unsafe impl<'a,'scope, 'env> Sync for StatusBar<'a,'scope, 'env> {}
 unsafe impl<'a,'scope, 'env> Send for StatusBar<'a,'scope, 'env> {}
 
 impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
-    pub fn add_module(&mut self, module: impl StatusModule) -> usize{
+    pub fn add_module(&mut self, module: Box<dyn StatusModule>){
         let mut lock = self.modules.lock().expect("mutex poisoned");
-        let q2: &mut Vec<Box<dyn StatusModule>> = &mut *lock;
-        match self.free_handles.pop(){
-            Some(idx) => {q2[idx]  = Box::new(module); return idx},
-            None => {lock.push(Box::new(module)); return lock.len() - 1;}
-        }
+        lock.push(module);
+        //let q2: &mut Vec<Box<dyn StatusModule>> = &mut *lock;
+        //match self.free_handles.pop(){
+        //    Some(idx) => {q2[idx]  = module; return idx},
+        //    None => {lock.push(module); return lock.len() - 1;}
+        //}
     }
 
-    #[allow(dead_code)]
-    pub fn remove_module(&mut self, handle: usize) -> Box<dyn StatusModule>{ // TODO test, free handle twice = error, free unused handle = error
-        self.free_handles.push(handle);
-        let mut lock = self.modules.lock().expect("mutex poisoned");
-        let q2: &mut Vec<Box<dyn StatusModule>> = &mut *lock;
-        q2.remove(handle)
-    }
+    //#[allow(dead_code)]
+    //pub fn remove_module(&mut self, handle: usize) -> Box<dyn StatusModule>{ // TODO test, free handle twice = error, free unused handle = error
+    //    self.free_handles.push(handle);
+    //    let mut lock = self.modules.lock().expect("mutex poisoned");
+    //    let q2: &mut Vec<Box<dyn StatusModule>> = &mut *lock;
+    //    q2.remove(handle)
+    //}
 
     #[allow(dead_code)]
     pub fn get_status(&mut self) -> &String{
@@ -86,7 +87,7 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
             status_string: String::from(""),
             out: std::io::stdout(),
             scope: scope,
-            free_handles: Vec::new(),
+            //free_handles: Vec::new(),
         };
         r.start_input_event_thread();
         r
