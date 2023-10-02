@@ -5,13 +5,13 @@ use chrono::{DateTime, Local};
 pub struct DateAndTimeModule{
     name: Option<String>,
     instance: Option<String>,
-    format: String
+    format: String,
 }
 
 
 impl status_bar::StatusModule for DateAndTimeModule{
 
-    fn configure(&mut self, module_conf: &serde_json::Value) {
+    fn configure(&mut self, module_conf: &toml::Value) {
         let name = module_conf["name"].as_str();
         match name{
             None => {eprint!("could not read name from config file for date and time module"); return;},
@@ -35,9 +35,9 @@ impl status_bar::StatusModule for DateAndTimeModule{
     fn handle_event(&self, _event: &status_bar::Event) {
     }
 
-    fn get_status_block(&mut self) -> status_bar::StatusBlock{
+    fn get_update(&mut self) -> Option<status_bar::StatusUpdate>{
         let now: DateTime<Local> = Local::now();
-        status_bar::StatusBlock{
+        return Some(status_bar::StatusUpdate{
             full_text: String::from(now.format(self.format.as_str()).to_string()),
             short_text: None,
             color: None,
@@ -55,7 +55,7 @@ impl status_bar::StatusModule for DateAndTimeModule{
             separator: None,
             separator_block_width: None,
             markup: None
-        }
+        })
     }
 }
 
@@ -65,7 +65,7 @@ impl DateAndTimeModule{
         DateAndTimeModule{
             name: None,
             instance: None,
-            format: String::from("%Y/%m/%d %T")
+            format: String::from("%Y/%m/%d %T"),
         }
     }
 }

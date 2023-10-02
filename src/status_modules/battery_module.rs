@@ -14,7 +14,7 @@ pub struct BatteryModule{
 
 impl status_bar::StatusModule for BatteryModule{
     
-    fn configure(&mut self, module_conf: &serde_json::Value) {
+    fn configure(&mut self, module_conf: &toml::Value) {
         let name = module_conf["name"].as_str();
         match name{
             None => {eprint!("could not read name from config file for battery module"); return;},
@@ -33,7 +33,7 @@ impl status_bar::StatusModule for BatteryModule{
     fn handle_event(&self, _event: &status_bar::Event) {
     }
 
-    fn get_status_block(&mut self) -> status_bar::StatusBlock{
+    fn get_update(&mut self) -> Option<status_bar::StatusUpdate>{
         self.f_energy_now.seek(std::io::SeekFrom::Start(0)).expect("failed to seek in file /sys/class/power_supply/BAT0/energy_now");
         let energy_now: f32 = from_str(std::io::read_to_string(&self.f_energy_now).unwrap().as_str()).unwrap(); //todo err handling
 
@@ -46,7 +46,7 @@ impl status_bar::StatusModule for BatteryModule{
         self.f_power_now.seek(std::io::SeekFrom::Start(0)).expect("/sys/class/power_supply/BAT0/power_now");
         let power_now: f32 = from_str(std::io::read_to_string(&self.f_power_now).unwrap().as_str()).unwrap(); //todo err handling
        
-        status_bar::StatusBlock{
+        Some(status_bar::StatusUpdate{
             full_text: String::from(format!("bat: {:.0}% {}{:.1}W", (energy_now / energy_full) * 100.0, if status == "Charging\n" {'+'} else if status == "Discharging\n" {'-'} else {'?'}, power_now / 1000000.0)),
             short_text: None,
             color: None,
@@ -64,7 +64,7 @@ impl status_bar::StatusModule for BatteryModule{
             separator: None,
             separator_block_width: None,
             markup: None
-        }
+        })
     }
 
     

@@ -2,15 +2,17 @@
 #[derive(serde_repr::Deserialize_repr)]
 #[repr(u8)]
 pub enum Button{
-    RIGHT = 3,
-    LEFT = 1,
-    MIDDLE = 2,
-    UNDEF = 4,
+    Right = 3,
+    Left = 1,
+    Middle = 2,
+    ScrollUp = 4,
+    ScrollDown=5,
+    Undef = 100,
 }
 
 impl Default for Button{
     fn default() -> Self {
-        Self::UNDEF
+        Self::Undef
     }
 }
 
@@ -45,26 +47,7 @@ pub struct Event{
 
 
 impl Event {
-    #[allow(dead_code)]
     pub fn from_json(json: &str) -> serde_json::Result<Event>{
         serde_json::from_str(json)
-    }
-
-    #[allow(dead_code)]
-    pub fn new() -> Event{
-        Event{
-            name: None,
-            instance: None,
-            x: 0,
-            y: 0,
-            button: Button::LEFT,
-            relative_x: 0,
-            relative_y: 0,
-            output_x: 0,
-            output_y: 0,
-            width: 0,
-            height: 0,
-            modifiers: Vec::new(),
-        }
     }
 }

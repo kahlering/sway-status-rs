@@ -1,6 +1,6 @@
 
 #[derive(serde::Serialize)]
-pub struct StatusBlock{
+pub struct StatusUpdate{
     pub full_text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub short_text: Option<String>,
@@ -36,7 +36,7 @@ pub struct StatusBlock{
     pub markup: Option<String>
 }
 
-impl StatusBlock{
+impl StatusUpdate{
     pub fn to_json_string(&self) -> String{
         serde_json::to_string(self).unwrap()
     }

@@ -4,6 +4,7 @@ use crate::status_bar::StatusModule;
 
 pub struct StatusBar<'a, 'scope, 'env>{
     modules: std::sync::Arc<std::sync::Mutex<Vec<Box<dyn StatusModule>>>>,
+    module_update_string_buffer: Vec<String>,
     //free_handles: Vec<usize>,
     status_string: String,
     out: std::io::Stdout,
@@ -17,24 +18,7 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
     pub fn add_module(&mut self, module: Box<dyn StatusModule>){
         let mut lock = self.modules.lock().expect("mutex poisoned");
         lock.push(module);
-        //let q2: &mut Vec<Box<dyn StatusModule>> = &mut *lock;
-        //match self.free_handles.pop(){
-        //    Some(idx) => {q2[idx]  = module; return idx},
-        //    None => {lock.push(module); return lock.len() - 1;}
-        //}
-    }
-
-    //#[allow(dead_code)]
-    //pub fn remove_module(&mut self, handle: usize) -> Box<dyn StatusModule>{ // TODO test, free handle twice = error, free unused handle = error
-    //    self.free_handles.push(handle);
-    //    let mut lock = self.modules.lock().expect("mutex poisoned");
-    //    let q2: &mut Vec<Box<dyn StatusModule>> = &mut *lock;
-    //    q2.remove(handle)
-    //}
-
-    #[allow(dead_code)]
-    pub fn get_status(&mut self) -> &String{
-        &self.status_string
+        self.module_update_string_buffer.push(String::from("{}"));
     }
 
     fn start_input_event_thread(&mut self)
@@ -45,7 +29,9 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         self.scope.spawn(move ||{
             let stdin = std::io::stdin();
             let mut buf = String::new();
+            stdin.read_line(&mut buf).expect("reading line from stdin failed"); // first line is just "["
             loop{
+                buf.clear();
                 stdin.read_line(&mut buf).expect("reading line from stdin failed");
                 match buf.find('{'){
                     Some(start_idx) =>{
@@ -70,10 +56,9 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
                         
                     }
                     None => {
-                        eprintln!("could not find {{ in line {}", buf);
+                        eprintln!("Error while parsing input: could not find {{ in line {}", buf);
                     }
                 }
-                buf.clear();
             }
         });
     }
@@ -87,6 +72,7 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
             status_string: String::from(""),
             out: std::io::stdout(),
             scope: scope,
+            module_update_string_buffer: Vec::new(),
             //free_handles: Vec::new(),
         };
         r.start_input_event_thread();
@@ -97,8 +83,11 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         self.status_string.clear();
         self.status_string.push_str("[");
         let mut lock = self.modules.lock().expect("mutex poisoned");
-        for m in lock.as_mut_slice(){
-            self.status_string.push_str(m.get_status_block().to_json_string().as_str());
+        for (i, m) in lock.iter_mut().enumerate(){
+            match m.get_update(){
+                Some(update) => {self.status_string.push_str(update.to_json_string().as_str()); self.module_update_string_buffer[i].clear(); self.module_update_string_buffer[i].push_str(update.to_json_string().as_str())},
+                None => {self.status_string.push_str(self.module_update_string_buffer[i].as_str());}
+            }
             self.status_string.push(',');
         }
         self.status_string.push_str("],\n");

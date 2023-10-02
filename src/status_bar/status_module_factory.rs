@@ -1,15 +1,15 @@
 use crate::status_bar::StatusModule;
 use crate::status_modules;
 
-pub fn create_status_module(module_conf: &serde_json::Value) -> Option<Box<dyn StatusModule>>{
-    let m_type = module_conf["type"].as_number().unwrap().as_u64().unwrap();
-    let mut m: Box<dyn StatusModule> = match m_type{
-        0 => {match status_modules::BatteryModule::new(){
+pub fn create_status_module(module_type: &String, module_conf: &toml::Value) -> Option<Box<dyn StatusModule>>{
+    //let m_type = module_conf["type"].as_integer().unwrap();
+    let mut m: Box<dyn StatusModule> = match module_type.as_str(){
+        "battery" => {match status_modules::BatteryModule::new(){
                 Ok(m) => Box::new(m),
                 Err(..) => return None
             }
         }
-        1 => {Box::new(status_modules::DateAndTimeModule::new())},
+        "date_and_time" => {Box::new(status_modules::DateAndTimeModule::new())},
         _ => return None,
     };
     m.configure(module_conf);

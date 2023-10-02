@@ -3,49 +3,28 @@ mod status_bar;
 mod status_modules;
 
 use std::io::BufReader;
-use std::io::{Read};
-
-// pub unsafe extern "C" fn fcntl(fd: cty::c_int, cmd: cty::c_int, mut args: ...) -> cty::c_int {
-    
-// }
-
-
-
-//extern "C" {
-//    fn set_stdin_nonblocking();
-//}
-
+use std::io::Read;
 
 fn main() {
-    
 
-    //unsafe{
-    //    set_stdin_nonblocking();
-    //}
     let home = std::env::var("HOME").unwrap();
-    let f_config = std::fs::File::open(home + "/.config/sway_status_rust/config").unwrap();
+    let f_config = std::fs::File::open(home + "/.config/sway_status_rust/config.toml").unwrap();
     let mut buf_reader = BufReader::new(f_config);
     let mut contents = String::new();
     buf_reader.read_to_string(&mut contents).unwrap();
-    let config: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(contents.as_str()).unwrap();
+    //let config: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(contents.as_str()).unwrap();
+    let config:std::collections::HashMap<String, toml::Value>  = toml::from_str(contents.as_str()).unwrap();
 
+    let refresh_rate_ms = config["status_bar_config"]["refresh_rate_ms"].as_integer().unwrap_or_else(||{eprint!("could not read refresh rate from config file. Using default of 1000ms"); 1000}) as u64;
     
     std::thread::scope(|s|{
         let mut status_bar = status_bar::StatusBar::new(s);
 
-        for module_conf in config["modules"].as_array().unwrap(){
-            let m = status_bar::status_module_factory::create_status_module(module_conf).unwrap();
+        for (module_type, module_conf) in config["modules"].as_table().unwrap(){
+            let m = status_bar::status_module_factory::create_status_module(module_type, module_conf).unwrap();
             status_bar.add_module(m);
         } 
 
-        //let battery_module = status_modules::battery_module::BatteryModule::new().expect("failed to create battery module");
-        //let date_and_time_module = status_modules::date_and_time::DateAndTimeModule::new();
-        
-        //let t2 = Box::new(battery_module);
-        //let _bat_handle = status_bar.add_module(t2);
-        //let _dat_handle = status_bar.add_module(date_and_time_module);
-
-        //let _a = status_bar.remove_module(_dat_handle);
         
         status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout");
      
@@ -53,7 +32,7 @@ fn main() {
         loop{
             status_bar.update_status();
             status_bar.write_status_to_stdout().expect("writing to stdout failed");
-            std::thread::sleep(std::time::Duration::from_secs(1));
+            std::thread::sleep(std::time::Duration::from_millis(refresh_rate_ms));
         }
     });
     
