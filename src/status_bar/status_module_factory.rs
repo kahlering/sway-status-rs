@@ -10,6 +10,7 @@ pub fn create_status_module(module_type: &String, module_conf: &toml::Value) -> 
             }
         }
         "date_and_time" => {Box::new(status_modules::DateAndTimeModule::new())},
+        "audio_volume" => {Box::new(status_modules::AudioModule::new())},
         _ => return None,
     };
     m.configure(module_conf);

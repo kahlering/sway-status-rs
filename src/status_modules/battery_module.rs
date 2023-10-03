@@ -30,7 +30,7 @@ impl status_bar::StatusModule for BatteryModule{
         self.module_name.clone()
     }
 
-    fn handle_event(&self, _event: &status_bar::Event) {
+    fn handle_event(&mut self, _event: &status_bar::Event) {
     }
 
     fn get_update(&mut self) -> Option<status_bar::StatusUpdate>{
