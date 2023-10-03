@@ -10,12 +10,22 @@ pub struct AudioModule{
 }
 
 impl AudioModule {
-    pub fn new() -> AudioModule{
-        AudioModule{
-            name: None,
+    // pub fn new() -> AudioModule{
+    //     AudioModule{
+    //         name: None,
+    //         instance: None,
+    //         volume: -10000,
+    //     }
+    // }
+
+    pub fn from_config(module_conf: &toml::Value) -> Option<AudioModule>{
+        let name = module_conf.get("name")?.as_str()?;
+
+        Some(AudioModule{
+            name: Some(String::from(name)),
             instance: None,
-            volume: -10000,
-        }
+            volume: -1000,
+        })
     }
 }
 
@@ -29,13 +39,13 @@ impl status_bar::StatusModule for AudioModule {
         self.name.clone()
     }
 
-    fn configure(&mut self, module_conf: &toml::Value) {
-        let name = module_conf["name"].as_str();
-        match name{
-            None => {eprint!("could not read name from config file for audio volume module"); return;},
-            Some(s) => {self.name = Some(String::from(s))}
-        }
-    }
+    // fn configure(&mut self, module_conf: &toml::Value) {
+    //     let name = module_conf["name"].as_str();
+    //     match name{
+    //         None => {eprint!("could not read name from config file for audio volume module"); return;},
+    //         Some(s) => {self.name = Some(String::from(s))}
+    //     }
+    // }
 
     fn get_update(&mut self) -> Option<crate::status_bar::StatusUpdate> {
         let new_vol: cty::c_int;
@@ -90,4 +100,6 @@ impl status_bar::StatusModule for AudioModule {
             _ => {}
         }
     }
+
+    
 }

@@ -3,33 +3,31 @@ use chrono::{DateTime, Local};
 
 
 pub struct DateAndTimeModule{
-    name: Option<String>,
-    instance: Option<String>,
     format: String,
 }
 
 
 impl status_bar::StatusModule for DateAndTimeModule{
 
-    fn configure(&mut self, module_conf: &toml::Value) {
-        let name = module_conf["name"].as_str();
-        match name{
-            None => {eprint!("could not read name from config file for date and time module"); return;},
-            Some(s) => {self.name = Some(String::from(s))}
-        }
-        let format = module_conf["format"].as_str();
-        match format{
-            None => {eprint!("could not read format from config file for date and time module"); return;},
-            Some(s) => {self.format = String::from(s)}
-        }
-    }
+    // fn configure(&mut self, module_conf: &toml::Value) {
+    //     let name = module_conf["name"].as_str();
+    //     match name{
+    //         None => {eprint!("could not read name from config file for date and time module"); return;},
+    //         Some(s) => {self.name = Some(String::from(s))}
+    //     }
+    //     let format = module_conf["format"].as_str();
+    //     match format{
+    //         None => {eprint!("could not read format from config file for date and time module"); return;},
+    //         Some(s) => {self.format = String::from(s)}
+    //     }
+    // }
 
     fn get_instance_name(&self) -> Option<String> {
-        self.name.clone()
+        None
     }
 
     fn get_module_name(&self) -> Option<String> {
-        self.instance.clone()
+        None
     }
 
     fn handle_event(&mut self, _event: &status_bar::Event) {
@@ -50,8 +48,8 @@ impl status_bar::StatusModule for DateAndTimeModule{
             min_width: None,
             align: None,
             urgent: None,
-            name: self.name.clone(),
-            instance: self.instance.clone(),
+            name: None,
+            instance: None,
             separator: None,
             separator_block_width: None,
             markup: None
@@ -61,11 +59,17 @@ impl status_bar::StatusModule for DateAndTimeModule{
 
 
 impl DateAndTimeModule{
-    pub fn new() -> DateAndTimeModule{
-        DateAndTimeModule{
-            name: None,
-            instance: None,
-            format: String::from("%Y/%m/%d %T"),
-        }
+    // pub fn new() -> DateAndTimeModule{
+    //     DateAndTimeModule{
+    //         format: String::from("%Y/%m/%d %T"),
+    //     }
+    // }
+
+    pub fn from_config(module_conf: &toml::Value) -> Option<DateAndTimeModule>{
+        let format = module_conf.get("format")?.as_str()?;
+
+        Some(DateAndTimeModule{
+            format: String::from(format),
+        })
     }
 }

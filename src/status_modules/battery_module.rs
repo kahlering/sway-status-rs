@@ -11,18 +11,18 @@ pub struct BatteryModule{
     module_name: Option<String>,
     instance: Option<String>,
     last_update: std::time::Instant,
-    refresh_rate: u64,
+    refresh_rate_ms: u64,
 }
 
 impl status_bar::StatusModule for BatteryModule{
     
-    fn configure(&mut self, module_conf: &toml::Value) {
-        let name = module_conf["name"].as_str();
-        match name{
-            None => {eprint!("could not read name from config file for battery module"); return;},
-            Some(s) => {self.module_name = Some(String::from(s))}
-        }
-    }
+    // fn configure(&mut self, module_conf: &toml::Value) {
+    //     let name = module_conf["name"].as_str();
+    //     match name{
+    //         None => {eprint!("could not read name from config file for battery module"); return;},
+    //         Some(s) => {self.module_name = Some(String::from(s))}
+    //     }
+    // }
 
     fn get_instance_name(&self) -> Option<String> {
         self.instance.clone()
@@ -36,7 +36,7 @@ impl status_bar::StatusModule for BatteryModule{
     }
 
     fn get_update(&mut self) -> Option<status_bar::StatusUpdate>{
-        if self.last_update.elapsed() < std::time::Duration::from_secs(5){
+        if self.last_update.elapsed() < std::time::Duration::from_millis(self.refresh_rate_ms){
             return None;
         }
         self.last_update = std::time::Instant::now();
@@ -69,49 +69,37 @@ impl status_bar::StatusModule for BatteryModule{
         })
     }
 
-    fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
-        let name = module_conf["name"].as_str()?;
-        let refresh_rate = module_conf["refresh_rate"].as_integer()?;
-        let bat_uevent_path = module_conf["bat_uevent_path"].as_str()?;
-        let file = std::fs::File::open(bat_uevent_path).unwrap();
-        
-        Some(BatteryModule{
-            f_uevent: file,
-            module_name: Some(String::from(name)),
-            instance: None,
-            last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate as u64),
-            refresh_rate: refresh_rate as u64,
-        })
-    }
-
-    
 }
 
 
 
 impl BatteryModule{
-    pub fn new() -> Result<BatteryModule, std::io::Error>{
-        Ok(BatteryModule{
-            f_uevent: std::fs::File::open("/sys/class/power_supply/BAT0/uevent")?,
-            module_name: None,
-            instance: None,
-            last_update: std::time::Instant::now() - std::time::Duration::from_secs(100000),
-            refresh_rate: 5
-        })
-    }
+    // pub fn new() -> Result<BatteryModule, std::io::Error>{
+    //     Ok(BatteryModule{
+    //         f_uevent: std::fs::File::open("/sys/class/power_supply/BAT0/uevent")?,
+    //         module_name: None,
+    //         instance: None,
+    //         last_update: std::time::Instant::now() - std::time::Duration::from_secs(100000),
+    //         refresh_rate: 5
+    //     })
+    // }
 
-    fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
-        let name = module_conf["name"].as_str()?;
-        let refresh_rate = module_conf["refresh_rate"].as_integer()?;
-        let bat_uevent_path = module_conf["bat_uevent_path"].as_str()?;
-        let file = std::fs::File::open(bat_uevent_path).unwrap();
+    pub fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
+        let name = module_conf.get("name")?.as_str()?;
+        let refresh_rate_ms = module_conf.get("refresh_rate_ms")?.as_integer()?;
+        let bat_uevent_path = module_conf.get("bat_uevent_path")?.as_str()?;
+        let file = std::fs::File::open(bat_uevent_path);
+        if file.is_err(){
+            eprintln!("could not open file {}", bat_uevent_path);
+            return None;
+        }
         
         Some(BatteryModule{
-            f_uevent: file,
+            f_uevent: file.unwrap(),
             module_name: Some(String::from(name)),
             instance: None,
-            last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate as u64),
-            refresh_rate: refresh_rate as u64,
+            last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate_ms as u64),
+            refresh_rate_ms: refresh_rate_ms as u64,
         })
     }
 

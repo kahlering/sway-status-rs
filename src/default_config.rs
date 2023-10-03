@@ -6,6 +6,8 @@ refresh_rate_ms= 1000
 [modules.battery]
 name = "battery_module"
 instance = "0"
+refresh_rate_ms = 5000
+bat_uevent_path = "/sys/class/power_supply/BAT0/uevent"
 
 [modules.date_and_time]
 name = "date_and_time_module"
