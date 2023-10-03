@@ -5,7 +5,7 @@ refresh_rate_ms= 1000
 
 [modules.battery]
 name = "battery_module"
-instance = "1"
+instance = "0"
 
 [modules.date_and_time]
 name = "date_and_time_module"

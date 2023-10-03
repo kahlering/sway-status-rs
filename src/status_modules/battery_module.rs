@@ -1,15 +1,17 @@
 use std::io::Seek;
-use serde_json::from_str;
 use crate::status_bar;
+
+const POWER_SUPPLY_CAPACITY_PROPERTY: &str = "POWER_SUPPLY_CAPACITY=";
+const POWER_SUPPLY_STATUS_PROPERTY: &str = "POWER_SUPPLY_STATUS=";
+const POWER_SUPPLY_POWER_NOW_PROPERTY: &str = "POWER_SUPPLY_POWER_NOW=";
 
 
 pub struct BatteryModule{
-    f_energy_now: std::fs::File,
-    f_energy_full: std::fs::File,
-    f_status: std::fs::File,
-    f_power_now: std::fs::File,
+    f_uevent: std::fs::File,
     module_name: Option<String>,
     instance: Option<String>,
+    last_update: std::time::Instant,
+    refresh_rate: u64,
 }
 
 impl status_bar::StatusModule for BatteryModule{
@@ -34,20 +36,20 @@ impl status_bar::StatusModule for BatteryModule{
     }
 
     fn get_update(&mut self) -> Option<status_bar::StatusUpdate>{
-        self.f_energy_now.seek(std::io::SeekFrom::Start(0)).expect("failed to seek in file /sys/class/power_supply/BAT0/energy_now");
-        let energy_now: f32 = from_str(std::io::read_to_string(&self.f_energy_now).unwrap().as_str()).unwrap(); //todo err handling
+        if self.last_update.elapsed() < std::time::Duration::from_secs(5){
+            return None;
+        }
+        self.last_update = std::time::Instant::now();
 
-        self.f_energy_full.seek(std::io::SeekFrom::Start(0)).expect("failed to seek in file /sys/class/power_supply/BAT0/energy_full");
-        let energy_full: f32 = from_str(std::io::read_to_string(&self.f_energy_full).unwrap().as_str()).unwrap(); //todo err handling
+        self.f_uevent.seek(std::io::SeekFrom::Start(0)).expect("/sys/class/power_supply/BAT0/power_now");
+        let uevent_string = std::io::read_to_string(&self.f_uevent).unwrap();
 
-        self.f_status.seek(std::io::SeekFrom::Start(0)).expect("failed to seek in file /sys/class/power_supply/BAT0/status");
-        let status = std::io::read_to_string(&self.f_status).unwrap(); //todo err handling
+        let capacity: isize = Self::get_property_from_uevent_str(POWER_SUPPLY_CAPACITY_PROPERTY, uevent_string.as_str()).parse().unwrap();
+        let status: &str = Self::get_property_from_uevent_str(POWER_SUPPLY_STATUS_PROPERTY, uevent_string.as_str());
+        let power_now: f32 = Self::get_property_from_uevent_str(POWER_SUPPLY_POWER_NOW_PROPERTY, uevent_string.as_str()).parse().unwrap();
 
-        self.f_power_now.seek(std::io::SeekFrom::Start(0)).expect("/sys/class/power_supply/BAT0/power_now");
-        let power_now: f32 = from_str(std::io::read_to_string(&self.f_power_now).unwrap().as_str()).unwrap(); //todo err handling
-       
         Some(status_bar::StatusUpdate{
-            full_text: String::from(format!("bat: {:.0}% {}{:.1}W", (energy_now / energy_full) * 100.0, if status == "Charging\n" {'+'} else if status == "Discharging\n" {'-'} else {'?'}, power_now / 1000000.0)),
+            full_text: String::from(format!("bat: {:.0}% {}{:.1}W", capacity, if status == "Charging\n" {'+'} else if status == "Discharging\n" {'-'} else {'?'}, power_now / 1000000.0)),
             short_text: None,
             color: None,
             background: None,
@@ -67,6 +69,21 @@ impl status_bar::StatusModule for BatteryModule{
         })
     }
 
+    fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
+        let name = module_conf["name"].as_str()?;
+        let refresh_rate = module_conf["refresh_rate"].as_integer()?;
+        let bat_uevent_path = module_conf["bat_uevent_path"].as_str()?;
+        let file = std::fs::File::open(bat_uevent_path).unwrap();
+        
+        Some(BatteryModule{
+            f_uevent: file,
+            module_name: Some(String::from(name)),
+            instance: None,
+            last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate as u64),
+            refresh_rate: refresh_rate as u64,
+        })
+    }
+
     
 }
 
@@ -75,12 +92,32 @@ impl status_bar::StatusModule for BatteryModule{
 impl BatteryModule{
     pub fn new() -> Result<BatteryModule, std::io::Error>{
         Ok(BatteryModule{
-            f_energy_now: std::fs::File::open("/sys/class/power_supply/BAT0/energy_now")?,
-            f_energy_full: std::fs::File::open("/sys/class/power_supply/BAT0/energy_full")?,
-            f_status: std::fs::File::open("/sys/class/power_supply/BAT0/status")?,
-            f_power_now: std::fs::File::open("/sys/class/power_supply/BAT0/power_now")?,
+            f_uevent: std::fs::File::open("/sys/class/power_supply/BAT0/uevent")?,
             module_name: None,
-            instance: None
+            instance: None,
+            last_update: std::time::Instant::now() - std::time::Duration::from_secs(100000),
+            refresh_rate: 5
         })
+    }
+
+    fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
+        let name = module_conf["name"].as_str()?;
+        let refresh_rate = module_conf["refresh_rate"].as_integer()?;
+        let bat_uevent_path = module_conf["bat_uevent_path"].as_str()?;
+        let file = std::fs::File::open(bat_uevent_path).unwrap();
+        
+        Some(BatteryModule{
+            f_uevent: file,
+            module_name: Some(String::from(name)),
+            instance: None,
+            last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate as u64),
+            refresh_rate: refresh_rate as u64,
+        })
+    }
+
+    fn get_property_from_uevent_str<'a>(property: &str, uevent_str: &'a str) -> &'a str{
+        let idx1 = uevent_str.find(property).unwrap() + property.len();
+        let idx2 = uevent_str[idx1..].find("\n").unwrap();
+        &uevent_str[idx1..(idx1 +idx2)]
     }
 }
