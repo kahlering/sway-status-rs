@@ -74,28 +74,14 @@ impl status_bar::StatusModule for BatteryModule{
 
 
 impl BatteryModule{
-    // pub fn new() -> Result<BatteryModule, std::io::Error>{
-    //     Ok(BatteryModule{
-    //         f_uevent: std::fs::File::open("/sys/class/power_supply/BAT0/uevent")?,
-    //         module_name: None,
-    //         instance: None,
-    //         last_update: std::time::Instant::now() - std::time::Duration::from_secs(100000),
-    //         refresh_rate: 5
-    //     })
-    // }
-
     pub fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
         let name = module_conf.get("name")?.as_str()?;
-        let refresh_rate_ms = module_conf.get("refresh_rate_ms")?.as_integer()?;
-        let bat_uevent_path = module_conf.get("bat_uevent_path")?.as_str()?;
-        let file = std::fs::File::open(bat_uevent_path);
-        if file.is_err(){
-            eprintln!("could not open file {}", bat_uevent_path);
-            return None;
-        }
-        
+        let refresh_rate_ms = module_conf.get("refresh_rate_ms").and_then(|v| {v.as_integer()}).or_else(||{eprintln!("battery module: could not read refresh_rate_ms from config"); None})?;
+        let bat_uevent_path = module_conf.get("bat_uevent_path").and_then(|v|{v.as_str()}).or_else(||{eprintln!("battery module: could not read bat_uevent_path from config"); None})?;
+        let file = std::fs::File::open(bat_uevent_path).ok().or_else(||{eprintln!("battery module: could not open file {}", bat_uevent_path); None})?;
+
         Some(BatteryModule{
-            f_uevent: file.unwrap(),
+            f_uevent: file,
             module_name: Some(String::from(name)),
             instance: None,
             last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate_ms as u64),

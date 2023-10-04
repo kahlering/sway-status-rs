@@ -20,7 +20,10 @@ fn main() {
     
     let config:std::collections::HashMap<String, toml::Value>  = toml::from_str(config_string.as_str()).unwrap();
 
-    let refresh_rate_ms = config.get("status_bar_config").unwrap().get("refresh_rate_ms").unwrap().as_integer().unwrap_or_else(||{eprint!("could not read refresh rate from config file. Using default of 1000ms"); 1000}) as u64;
+    let refresh_rate_ms = config.get("status_bar_config").
+                                and_then(|v|{v.get("refresh_rate_ms").
+                                and_then(|v|{v.as_integer()})}).
+                                unwrap_or_else(||{eprintln!("could not read refresh rate from config file. Using default of 1000ms"); 1000}) as u64;
     
     std::thread::scope(|s|{
         let mut status_bar = status_bar::StatusBar::new(s);
@@ -34,13 +37,11 @@ fn main() {
             status_bar.add_module(m.unwrap());
         } 
 
-        
-        status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout");
+        status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout"); // crash because the status bar would not work without the header
      
-
         loop{
             status_bar.update_status();
-            status_bar.write_status_to_stdout().expect("writing to stdout failed");
+            if status_bar.write_status_to_stdout().is_err(){eprintln!("could not write to stdout")};
             std::thread::sleep(std::time::Duration::from_millis(refresh_rate_ms));
         }
     });

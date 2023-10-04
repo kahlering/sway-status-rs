@@ -9,19 +9,6 @@ pub struct DateAndTimeModule{
 
 impl status_bar::StatusModule for DateAndTimeModule{
 
-    // fn configure(&mut self, module_conf: &toml::Value) {
-    //     let name = module_conf["name"].as_str();
-    //     match name{
-    //         None => {eprint!("could not read name from config file for date and time module"); return;},
-    //         Some(s) => {self.name = Some(String::from(s))}
-    //     }
-    //     let format = module_conf["format"].as_str();
-    //     match format{
-    //         None => {eprint!("could not read format from config file for date and time module"); return;},
-    //         Some(s) => {self.format = String::from(s)}
-    //     }
-    // }
-
     fn get_instance_name(&self) -> Option<String> {
         None
     }
@@ -59,14 +46,8 @@ impl status_bar::StatusModule for DateAndTimeModule{
 
 
 impl DateAndTimeModule{
-    // pub fn new() -> DateAndTimeModule{
-    //     DateAndTimeModule{
-    //         format: String::from("%Y/%m/%d %T"),
-    //     }
-    // }
-
     pub fn from_config(module_conf: &toml::Value) -> Option<DateAndTimeModule>{
-        let format = module_conf.get("format")?.as_str()?;
+        let format = module_conf.get("format").and_then(|v|{v.as_str()}).unwrap_or_else(||{eprintln!("DateAndTimeModule: could not read format from config. Using default."); "%Y/%m/%d %T"});
 
         Some(DateAndTimeModule{
             format: String::from(format),
