@@ -1,29 +1,23 @@
 use crate::status_bar;
-use std::io::Read;
 use std::io::Seek;
-use num_cpus;
 
 pub struct CPUModule{
     f_stat: std::fs::File,
     f_temp: std::fs::File,
-    buf: String,
-    num_cpus: usize,
-    usage_vec: Vec<(usize, usize)>,
+    jiffies_per_cpu: Vec<(usize, usize)>,
 }
 
 impl CPUModule {
-    pub fn from_config(_module_conf: &toml::Value) -> Option<CPUModule>{
-        let f = std::fs::File::open("/proc/stat").unwrap();
+    pub fn from_config(_module_conf: &toml::Value) -> Result<CPUModule, std::io::Error>{
+        let f = std::fs::File::open("/proc/stat")?;
         let f_temp = std::fs::File::open("/sys/class/thermal/thermal_zone0/temp").
-                           or(std::fs::File::open("/sys/class/hwmon/hwmon0/temp1_input")).unwrap();
-        let num_cpus = num_cpus::get();
+                           or(std::fs::File::open("/sys/class/hwmon/hwmon0/temp1_input"))?;
+        //let num_cpus = num_cpus::get();
         //let reader = std::io::BufReader::new(f);
-        Some(CPUModule { 
+        Ok(CPUModule { 
             f_stat: f,
             f_temp: f_temp,
-            buf: String::new(),
-            num_cpus: num_cpus,
-            usage_vec: vec![(0,0); num_cpus],
+            jiffies_per_cpu: Vec::new(),
          })
     }
 
@@ -48,36 +42,62 @@ impl CPUModule {
         return '█';
     }
 
-    fn stat_str_to_usage_string(&mut self) -> Option<String>{
-        let a = self.buf.lines();
-        //eprintln!("{}", self.stat_string);
-        let mut cpu_string = String::from("CPU:");
-        for (idx, line) in a.skip(1).take(self.num_cpus).enumerate(){
+    fn stat_to_jiffies_per_cpu(stat_str: &str) -> Result<Vec<(usize, usize)>, ()>{
+        let mut r: Vec<(usize, usize)> = Vec::new();
+        let a = stat_str.lines();
+        for line in a.skip(1){
             if line.starts_with("cpu"){
                 let mut split = line.split_whitespace();
                 
                 split.next();// skip first element
-                let s1: usize= split.next()?.parse().unwrap(); // TODO handle error
-                let s2: usize= split.next()?.parse().unwrap();
-                let s3: usize= split.next()?.parse().unwrap();
-                let rest:usize = split.fold(0, |a, i|{a + i.parse::<usize>().unwrap()}); // TODO handle error
+                let user = split.next().ok_or(())?.parse::<usize>().map_err(|_e|())?; // TODO handle error
+                let nice: usize= split.next().ok_or(())?.parse().map_err(|_e|())?;
+                let system: usize= split.next().ok_or(())?.parse().map_err(|_e|())?;
+                let idle: usize= split.next().ok_or(())?.parse().map_err(|_e|())?;
+                let iowait: usize= split.next().ok_or(())?.parse().map_err(|_e|())?;
+                let irq: usize= split.next().ok_or(())?.parse().map_err(|_e|())?;
+                let softirq: usize= split.next().ok_or(())?.parse().map_err(|_e|())?;
 
-                let work = s1 + s2 + s3;
-                let total = work + rest;
-                let usage_old = self.usage_vec[idx];
-                let usage_new = (work, total);
-                let diff_work:usize = usage_new.0 - usage_old.0;
-                let diff_total:usize = (usage_new.1) - usage_old.1;
-                let usage = (100 * diff_work).checked_div(diff_total).unwrap_or(100);
-                cpu_string.push(Self::usage_to_char(usage));
-                self.usage_vec[idx] = usage_new;
+                let work = user + nice + system;
+                let total = work + idle + iowait + irq + softirq;
+                r.push((work, total));
             }else{
                 break;
             }
         }
-        cpu_string.pop();
-        Some(cpu_string)
-    }
+        Ok(r)
+    }   
+
+    // fn stat_str_to_usage_string(&mut self) -> Option<String>{
+    //     let a = self.buf.lines();
+    //     //eprintln!("{}", self.stat_string);
+    //     let mut cpu_string = String::from("CPU:");
+    //     for (idx, line) in a.skip(1).take(self.num_cpus).enumerate(){
+    //         if line.starts_with("cpu"){
+    //             let mut split = line.split_whitespace();
+                
+    //             split.next();// skip first element
+    //             let s1: usize= split.next()?.parse().unwrap(); // TODO handle error
+    //             let s2: usize= split.next()?.parse().unwrap();
+    //             let s3: usize= split.next()?.parse().unwrap();
+    //             let rest:usize = split.fold(0, |a, i|{a + i.parse::<usize>().unwrap()}); // TODO handle error
+
+    //             let work = s1 + s2 + s3;
+    //             let total = work + rest;
+    //             let usage_old = self.usage_vec[idx];
+    //             let usage_new = (work, total);
+    //             let diff_work:usize = usage_new.0 - usage_old.0;
+    //             let diff_total:usize = (usage_new.1) - usage_old.1;
+    //             let usage = (100 * diff_work).checked_div(diff_total).unwrap_or(100);
+    //             cpu_string.push(Self::usage_to_char(usage));
+    //             self.usage_vec[idx] = usage_new;
+    //         }else{
+    //             break;
+    //         }
+    //     }
+    //     cpu_string.pop();
+    //     Some(cpu_string)
+    // }
 
     // pub fn new() -> Option<CPUModule>{
     //     let f = std::fs::File::open("/proc/stat").unwrap();
@@ -109,17 +129,27 @@ impl status_bar::StatusModule for CPUModule{
 
     fn get_update(&mut self) -> Option<status_bar::StatusUpdate>{
         self.f_stat.seek(std::io::SeekFrom::Start(0)).unwrap();
-        self.f_stat.read_to_string(&mut self.buf).unwrap();
-        let mut cpu_string = self.stat_str_to_usage_string().or_else(||{eprintln!("could not generate cpu string"); None})?;
-        self.buf.clear();
 
-        self.f_temp.seek(std::io::SeekFrom::Start(0)).unwrap();
-        self.f_temp.read_to_string(&mut self.buf).unwrap();
-        self.buf.pop();
-        let temp: usize = self.buf.parse::<usize>().unwrap() / 1000;
+        if !self.f_stat.rewind().is_ok(){eprintln!("CPUModule: cannot rewind /proc/stat file"); return None};
+        let stat_string = std::io::read_to_string(&self.f_stat).ok()?;
+        let jiffies_new = Self::stat_to_jiffies_per_cpu(&stat_string).ok()?;
+        let jiffies_old = &self.jiffies_per_cpu;
+
+        let mut cpu_string = String::from("CPU ");
+        for (new, old) in jiffies_new.iter().zip(jiffies_old.iter()){
+            let diff_work:usize = new.0 - old.0;
+            let diff_total:usize = new.1 - old.1;
+            let usage = (100 * diff_work).checked_div(diff_total).unwrap_or(100);
+            cpu_string.push(Self::usage_to_char(usage));
+        }
+        self.jiffies_per_cpu = jiffies_new;
+
+
+        if !self.f_temp.rewind().is_ok(){eprintln!("CPUModule: cannot rewind temperature file"); return None};
+        let temp_string = std::io::read_to_string(&self.f_temp).ok()?;
+        let temp: usize = temp_string[0..temp_string.len() - 1].parse::<usize>().unwrap() / 1000;
         cpu_string.push_str(format!(" {temp}°C").as_str());
         
-        self.buf.clear();
 
         Some(status_bar::StatusUpdate{
             full_text: cpu_string,

@@ -10,10 +10,9 @@ pub struct AudioModule{
 }
 
 impl AudioModule {
-    pub fn from_config(module_conf: &toml::Value) -> Option<AudioModule>{
-        let name = module_conf.get("name").and_then(|v|{v.as_str()}).or_else(||{eprintln!("AudioModule: could not read name from config"); None})?;
-
-        Some(AudioModule{
+    pub fn from_config(module_conf: &toml::Value) -> Result<AudioModule, ()>{
+        let name = module_conf.get("name").and_then(|v|{v.as_str()}).ok_or_else(||{eprintln!("AudioModule: could not read name from config"); ()})?;
+        Ok(AudioModule{
             name: Some(String::from(name)),
             instance: None,
             volume: -1000,

@@ -46,10 +46,10 @@ impl status_bar::StatusModule for DateAndTimeModule{
 
 
 impl DateAndTimeModule{
-    pub fn from_config(module_conf: &toml::Value) -> Option<DateAndTimeModule>{
+    pub fn from_config(module_conf: &toml::Value) -> Result<DateAndTimeModule, ()>{
         let format = module_conf.get("format").and_then(|v|{v.as_str()}).unwrap_or_else(||{eprintln!("DateAndTimeModule: could not read format from config. Using default."); "%Y/%m/%d %T"});
 
-        Some(DateAndTimeModule{
+        Ok(DateAndTimeModule{
             format: String::from(format),
         })
     }

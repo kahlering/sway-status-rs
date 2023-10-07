@@ -41,7 +41,7 @@ impl status_bar::StatusModule for BatteryModule{
         }
         self.last_update = std::time::Instant::now();
 
-        self.f_uevent.seek(std::io::SeekFrom::Start(0)).expect("/sys/class/power_supply/BAT0/power_now");
+        self.f_uevent.seek(std::io::SeekFrom::Start(0)).expect("BatteryModule: could not seek in file");
         let uevent_string = std::io::read_to_string(&self.f_uevent).unwrap();
 
         let capacity: isize = Self::get_property_from_uevent_str(POWER_SUPPLY_CAPACITY_PROPERTY, uevent_string.as_str()).parse().unwrap();
@@ -74,13 +74,13 @@ impl status_bar::StatusModule for BatteryModule{
 
 
 impl BatteryModule{
-    pub fn from_config(module_conf: &toml::Value) -> Option<BatteryModule>{
-        let name = module_conf.get("name")?.as_str()?;
-        let refresh_rate_ms = module_conf.get("refresh_rate_ms").and_then(|v| {v.as_integer()}).or_else(||{eprintln!("battery module: could not read refresh_rate_ms from config"); None})?;
-        let bat_uevent_path = module_conf.get("bat_uevent_path").and_then(|v|{v.as_str()}).or_else(||{eprintln!("battery module: could not read bat_uevent_path from config"); None})?;
-        let file = std::fs::File::open(bat_uevent_path).ok().or_else(||{eprintln!("battery module: could not open file {}", bat_uevent_path); None})?;
-
-        Some(BatteryModule{
+    pub fn from_config(module_conf: &toml::Value) -> Result<BatteryModule, ()>{
+        let name = module_conf.get("name").ok_or(())?.as_str().ok_or(())?;
+        let refresh_rate_ms = module_conf.get("refresh_rate_ms").and_then(|v| {v.as_integer()}).ok_or_else(||{eprintln!("BatteryModule: could not read refresh_rate_ms from config"); ()})?;
+        let bat_uevent_path = module_conf.get("bat_uevent_path").and_then(|v|{v.as_str()}).ok_or_else(||{eprintln!("BatteryModule: could not read bat_uevent_path from config"); ()})?;
+        let file = std::fs::File::open(bat_uevent_path).map_err(|_e|{eprintln!("battery module: could not open file {}", bat_uevent_path);()})?;
+        
+        Ok(BatteryModule{
             f_uevent: file,
             module_name: Some(String::from(name)),
             instance: None,
