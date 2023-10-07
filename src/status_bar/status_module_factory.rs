@@ -6,6 +6,7 @@ pub fn create_status_module(module_type: &String, module_conf: &toml::Value) -> 
         "battery" => {Box::new(status_modules::BatteryModule::from_config(module_conf)?)},
         "date_and_time" => {Box::new(status_modules::DateAndTimeModule::from_config(module_conf)?)},
         "audio_volume" => {Box::new(status_modules::AudioModule::from_config(module_conf)?)},
+        "cpu" => {Box::new(status_modules::CPUModule::from_config(module_conf)?)},
         _ => return None,
     };
     Some(m)
