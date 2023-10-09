@@ -12,8 +12,6 @@ impl CPUModule {
         let f = std::fs::File::open("/proc/stat")?;
         let f_temp = std::fs::File::open("/sys/class/thermal/thermal_zone0/temp").
                            or(std::fs::File::open("/sys/class/hwmon/hwmon0/temp1_input"))?;
-        //let num_cpus = num_cpus::get();
-        //let reader = std::io::BufReader::new(f);
         Ok(CPUModule { 
             f_stat: f,
             f_temp: f_temp,

@@ -6,6 +6,19 @@ use std::io::BufReader;
 use std::io::Read;
 use crate::default_config::DEFAULT_CONFIG;
 
+macro_rules! create_module {
+    ( $status_bar:expr, $module_type:expr ,$conf:expr ) => {
+        {let m = status_bar::status_module_factory::create_status_module($module_type, $conf);
+        if m.is_none(){
+            eprintln!("could not create module {}", $module_type);
+            continue;
+        }
+        $status_bar.add_module(m.unwrap());}
+    };
+}
+
+
+
 fn main() {
     let mut config_string = String::new();
     let home = std::env::var("HOME").unwrap();
@@ -29,12 +42,14 @@ fn main() {
         let mut status_bar = status_bar::StatusBar::new(s);
 
         for (module_type, module_conf) in config["modules"].as_table().unwrap(){
-            let m = status_bar::status_module_factory::create_status_module(module_type, module_conf);
-            if m.is_none(){
-                eprintln!("could not create module {}", module_type);
-                continue;
+            if module_conf.is_array(){
+                for module_conf_entry in module_conf.as_array().unwrap(){
+                    create_module!(status_bar, module_type, module_conf_entry);
+                }
+            }else{
+                create_module!(status_bar, module_type, module_conf);
             }
-            status_bar.add_module(m.unwrap());
+            
         } 
 
         status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout"); // crash because the status bar would not work without the header
