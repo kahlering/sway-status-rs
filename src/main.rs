@@ -4,6 +4,8 @@ mod default_config;
 
 use std::io::BufReader;
 use std::io::Read;
+use toml::Value;
+
 use crate::default_config::DEFAULT_CONFIG;
 
 macro_rules! create_module {
@@ -31,7 +33,7 @@ fn main() {
         Err(_) => {config_string = String::from(DEFAULT_CONFIG)}
     }
     
-    let config:std::collections::HashMap<String, toml::Value>  = toml::from_str(config_string.as_str()).unwrap();
+    let config: toml::value::Table  = toml::from_str(config_string.as_str()).unwrap();
 
     let refresh_rate_ms = config.get("status_bar_config").
                                 and_then(|v|{v.get("refresh_rate_ms").
@@ -41,16 +43,27 @@ fn main() {
     std::thread::scope(|s|{
         let mut status_bar = status_bar::StatusBar::new(s);
 
+        let mut modules_conf_vec: Vec<(i64, &String, &Value)> = Vec::new(); 
         for (module_type, module_conf) in config["modules"].as_table().unwrap(){
             if module_conf.is_array(){
                 for module_conf_entry in module_conf.as_array().unwrap(){
-                    create_module!(status_bar, module_type, module_conf_entry);
+                    modules_conf_vec.push((module_conf_entry.get("status_bar_pos").and_then(|v|{v.as_integer()}).unwrap_or(-1), &module_type, &module_conf_entry));
                 }
             }else{
-                create_module!(status_bar, module_type, module_conf);
+                modules_conf_vec.push((module_conf.get("status_bar_pos").and_then(|v|{v.as_integer()}).unwrap_or(-1), &module_type, &module_conf));
             }
-            
-        } 
+        }
+
+        modules_conf_vec.sort_by(|v1, v2|{v2.0.cmp(&v1.0)});
+
+        for (_, module_type, module_conf) in modules_conf_vec{
+            let m = status_bar::status_module_factory::create_status_module(module_type, module_conf);
+            if m.is_none(){
+                eprintln!("could not create module {}", module_type);
+                continue;
+            }
+            status_bar.add_module(m.unwrap());
+        }
 
         status_bar.write_protocol_header_to_stdout().expect("failed to write protocol header to stdout"); // crash because the status bar would not work without the header
      

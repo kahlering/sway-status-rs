@@ -36,7 +36,6 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
                 match buf.find('{'){
                     Some(start_idx) =>{
                         let input = &buf.as_str()[start_idx..];
-                        eprintln!("start idx: {} buf:\n {} \n\n", start_idx, buf);
                         match Event::from_json(input)  {
                             Ok(event) => {
                                 if event.name.as_ref().is_none(){

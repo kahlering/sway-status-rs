@@ -36,9 +36,6 @@ impl status_bar::StatusModule for AudioModule {
             new_vol = bindings::get_audio_volume();
         }
 
-        if new_vol == self.volume{
-            return None;
-        }
         self.volume = new_vol;
         let text: String;
         match new_vol{
