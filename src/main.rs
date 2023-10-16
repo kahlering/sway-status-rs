@@ -8,18 +8,6 @@ use toml::Value;
 
 use crate::default_config::DEFAULT_CONFIG;
 
-macro_rules! create_module {
-    ( $status_bar:expr, $module_type:expr ,$conf:expr ) => {
-        {let m = status_bar::status_module_factory::create_status_module($module_type, $conf);
-        if m.is_none(){
-            eprintln!("could not create module {}", $module_type);
-            continue;
-        }
-        $status_bar.add_module(m.unwrap());}
-    };
-}
-
-
 
 fn main() {
     let mut config_string = String::new();

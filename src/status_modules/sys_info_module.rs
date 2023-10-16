@@ -141,7 +141,7 @@ impl status_bar::StatusModule for SysInfoModule{
                 self.sys_info.refresh_memory();
                 let used_mem = self.sys_info.used_memory() as f32 /  f32::powf(1024.0, 3.0);
                 let total_mem = self.sys_info.total_memory() as f32 / f32::powf(1024.0, 3.0);
-                self.mem_string = format!("Mem {0:.1}/{1:.1} GiB ", used_mem, total_mem);
+                self.mem_string = format!("Mem {0:.1}/{1:.1}G ", used_mem, total_mem);
             }
             sysinfo_string.push_str(self.mem_string.as_str());
         }
