@@ -6,13 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cty = "*"
+cty = "0.2.2"
 serde = { version = "1.0.188" , features = ["derive"] }
 serde_json = "1.0.96"
 serde_repr = "0.1"
-chrono = "*"
+chrono = "0.4.31"
 toml = "0.4.2"
-sysinfo = "*"
+sysinfo = "0.29.10"
 
 [build-dependencies]
 cc = "1.0"
