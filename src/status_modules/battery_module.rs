@@ -13,15 +13,6 @@ pub struct BatteryModule{
 }
 
 impl status_bar::StatusModule for BatteryModule{
-
-    fn get_instance_name(&self) -> Option<String> {
-        None
-    }
-
-    fn get_module_name(&self) -> Option<String> {
-        None
-    }
-
     fn handle_event(&mut self, _event: &status_bar::Event) {
     }
 

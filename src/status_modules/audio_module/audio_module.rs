@@ -17,13 +17,6 @@ impl AudioModule {
 
 
 impl status_bar::StatusModule for AudioModule {
-    fn get_instance_name(&self) -> Option<String> {
-        None
-    }
-
-    fn get_module_name(&self) -> Option<String> {
-        None
-    }
 
     fn get_update(&mut self) -> Option<crate::status_bar::StatusUpdate> {
         let new_vol: cty::c_int;
