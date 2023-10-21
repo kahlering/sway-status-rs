@@ -4,17 +4,12 @@ use super::bindings::{self, set_audio_volume};
 
 
 pub struct AudioModule{
-    name: Option<String>,
-    instance: Option<String>,
     volume: i32,
 }
 
 impl AudioModule {
-    pub fn from_config(module_conf: &toml::Value) -> Result<AudioModule, ()>{
-        let name = module_conf.get("name").and_then(|v|{v.as_str()}).ok_or_else(||{eprintln!("AudioModule: could not read name from config"); ()})?;
+    pub fn from_config(_module_conf: &toml::Value) -> Result<AudioModule, ()>{
         Ok(AudioModule{
-            name: Some(String::from(name)),
-            instance: None,
             volume: -1000,
         })
     }
@@ -23,11 +18,11 @@ impl AudioModule {
 
 impl status_bar::StatusModule for AudioModule {
     fn get_instance_name(&self) -> Option<String> {
-        self.instance.clone()
+        None
     }
 
     fn get_module_name(&self) -> Option<String> {
-        self.name.clone()
+        None
     }
 
     fn get_update(&mut self) -> Option<crate::status_bar::StatusUpdate> {
@@ -57,8 +52,6 @@ impl status_bar::StatusModule for AudioModule {
             min_width: None,
             align: None,
             urgent: None,
-            name: self.name.clone(),
-            instance: self.instance.clone(),
             separator: None,
             separator_block_width: None,
             markup: None

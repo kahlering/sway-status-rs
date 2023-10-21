@@ -1,11 +1,27 @@
 use std::io::{Write};
 use crate::status_bar::Event;
 use crate::status_bar::StatusModule;
+use crate::status_bar::StatusUpdate;
+
+
+#[derive(serde::Serialize)]
+struct SwayStatusUpdate{
+    name: String,
+    #[serde(flatten)]
+    update: StatusUpdate
+}
+
+#[derive(serde::Deserialize)]
+struct SwayStatusEvent{
+    name: String,
+    #[serde(flatten)]
+    event: Event,
+}
+
 
 pub struct StatusBar<'a, 'scope, 'env>{
     modules: std::sync::Arc<std::sync::Mutex<Vec<Box<dyn StatusModule>>>>,
     module_update_string_buffer: Vec<String>,
-    //free_handles: Vec<usize>,
     status_string: String,
     out: std::io::Stdout,
     scope: &'a std::thread::Scope<'scope, 'env>,
@@ -21,6 +37,7 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         self.module_update_string_buffer.push(String::from("{}"));
     }
 
+    
     fn start_input_event_thread(&mut self)
     where
         'a: 'scope
@@ -36,17 +53,14 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
                 match buf.find('{'){
                     Some(start_idx) =>{
                         let input = &buf.as_str()[start_idx..];
-                        match Event::from_json(input)  {
-                            Ok(event) => {
-                                if event.name.as_ref().is_none(){
-                                    continue
-                                }
+                        eprintln!("{}", input);
+                        //match Event::from_json(input)  {
+                        match serde_json::from_str::<SwayStatusEvent>(input) {
+                            Ok(swayevent) => {
                                 let mut l = r.lock().expect("mutex poisoned");
-                                for m in l.as_mut_slice(){
-                                    if m.get_module_name() == event.name && m.get_instance_name() == event.instance{ //TODO check if == works as expected on option
-                                        m.handle_event(&event);
-                                    }
-                                }                                   
+                                let Ok(module_idx) = swayevent.name.parse::<usize>() else {eprintln!("failed to parse event name to index"); continue;};
+                                let m = l.get_mut(module_idx).unwrap();
+                                m.handle_event(&swayevent.event);                                 
                             },
                             Err(e) => {
                                 eprintln!("failed to parse json: {}", e);
@@ -84,7 +98,16 @@ impl<'a, 'scope, 'env> StatusBar<'a,'scope, 'env>{
         let mut lock = self.modules.lock().expect("mutex poisoned");
         for (i, m) in lock.iter_mut().enumerate(){
             match m.get_update(){
-                Some(update) => {self.status_string.push_str(update.to_json_string().as_str()); self.module_update_string_buffer[i].clear(); self.module_update_string_buffer[i].push_str(update.to_json_string().as_str())},
+                Some(update) =>{
+                    let u = SwayStatusUpdate{
+                        name: i.to_string(),
+                        update: update,
+                    };
+                    let update_string = serde_json::to_string(&u).unwrap();
+                    self.status_string.push_str(update_string.as_str());
+                    self.module_update_string_buffer[i].clear();
+                    self.module_update_string_buffer[i].push_str(update_string.as_str());
+                },
                 None => {self.status_string.push_str(self.module_update_string_buffer[i].as_str());}
             }
             self.status_string.push(',');

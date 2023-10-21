@@ -35,8 +35,6 @@ impl status_bar::StatusModule for DateAndTimeModule{
             min_width: None,
             align: None,
             urgent: None,
-            name: None,
-            instance: None,
             separator: None,
             separator_block_width: None,
             markup: None

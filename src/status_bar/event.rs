@@ -7,6 +7,8 @@ pub enum Button{
     Middle = 2,
     ScrollUp = 4,
     ScrollDown=5,
+    ScrollLeft = 6,
+    ScrollRicht = 7,
     Undef = 100,
 }
 
@@ -19,10 +21,6 @@ impl Default for Button{
 
 #[derive(serde::Deserialize)]
 pub struct Event{
-    #[serde(default)]
-    pub name: Option<String>,
-    #[serde(default)]
-    pub instance: Option<String>,
     #[serde(default)]
     pub x: isize,
     #[serde(default)]
@@ -43,11 +41,4 @@ pub struct Event{
     pub height: isize,
     #[serde(default)]
     pub modifiers: Vec<String>
-}
-
-
-impl Event {
-    pub fn from_json(json: &str) -> serde_json::Result<Event>{
-        serde_json::from_str(json)
-    }
 }

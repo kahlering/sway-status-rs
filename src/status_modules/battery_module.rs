@@ -8,28 +8,18 @@ const POWER_SUPPLY_POWER_NOW_PROPERTY: &str = "POWER_SUPPLY_POWER_NOW=";
 
 pub struct BatteryModule{
     f_uevent: std::fs::File,
-    module_name: Option<String>,
-    instance: Option<String>,
     last_update: std::time::Instant,
     refresh_rate_ms: u64,
 }
 
 impl status_bar::StatusModule for BatteryModule{
-    
-    // fn configure(&mut self, module_conf: &toml::Value) {
-    //     let name = module_conf["name"].as_str();
-    //     match name{
-    //         None => {eprint!("could not read name from config file for battery module"); return;},
-    //         Some(s) => {self.module_name = Some(String::from(s))}
-    //     }
-    // }
 
     fn get_instance_name(&self) -> Option<String> {
-        self.instance.clone()
+        None
     }
 
     fn get_module_name(&self) -> Option<String> {
-        self.module_name.clone()
+        None
     }
 
     fn handle_event(&mut self, _event: &status_bar::Event) {
@@ -61,8 +51,6 @@ impl status_bar::StatusModule for BatteryModule{
             min_width: None,
             align: None,
             urgent: None,
-            name: self.module_name.clone(),
-            instance: self.instance.clone(),
             separator: None,
             separator_block_width: None,
             markup: None
@@ -75,15 +63,12 @@ impl status_bar::StatusModule for BatteryModule{
 
 impl BatteryModule{
     pub fn from_config(module_conf: &toml::Value) -> Result<BatteryModule, ()>{
-        let name = module_conf.get("name").ok_or(())?.as_str().ok_or(())?;
         let refresh_rate_ms = module_conf.get("refresh_rate_ms").and_then(|v| {v.as_integer()}).ok_or_else(||{eprintln!("BatteryModule: could not read refresh_rate_ms from config"); ()})?;
         let bat_uevent_path = module_conf.get("bat_uevent_path").and_then(|v|{v.as_str()}).ok_or_else(||{eprintln!("BatteryModule: could not read bat_uevent_path from config"); ()})?;
         let file = std::fs::File::open(bat_uevent_path).map_err(|_e|{eprintln!("battery module: could not open file {}", bat_uevent_path);()})?;
         
         Ok(BatteryModule{
             f_uevent: file,
-            module_name: Some(String::from(name)),
-            instance: None,
             last_update: std::time::Instant::now() - std::time::Duration::from_secs(refresh_rate_ms as u64),
             refresh_rate_ms: refresh_rate_ms as u64,
         })

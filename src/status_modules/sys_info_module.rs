@@ -162,8 +162,6 @@ impl status_bar::StatusModule for SysInfoModule{
             min_width: None,
             align: None,
             urgent: None,
-            name: None,
-            instance: None,
             separator: None,
             separator_block_width: None,
             markup: None
