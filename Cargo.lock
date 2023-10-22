@@ -285,7 +285,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sway-status-rust"
+name = "sway-status-rs"
 version = "0.1.0"
 dependencies = [
  "cc",
