@@ -1,0 +1,25 @@
+[status_bar_config]
+refresh_rate_ms = 1000
+
+[modules]
+
+[modules.battery]
+refresh_rate_ms = 5000
+bat_uevent_path = "/sys/class/power_supply/BAT0/uevent"
+status_bar_pos = 1
+
+[modules.date_and_time]
+format = "%Y/%m/%d %T"
+status_bar_pos = 0
+
+[modules.sysinfo]
+disks = ["/dev/nvme0n1p3"]
+show_disks = true
+show_mem = true
+show_cpu = true
+disk_refresh_rate_ms = 60000 
+mem_refresh_rate_ms = 5000
+status_bar_pos = 3
+
+[modules.audio_volume]
+status_bar_pos = 2

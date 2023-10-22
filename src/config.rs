@@ -81,5 +81,5 @@ impl Index<&str> for Config {
 
 pub fn get_default_config_path() -> String{
     let home = std::env::var("HOME").unwrap();
-    home + "/.config/sway_status_rust/config.toml"
+    home + "/.config/sway-status-rs/config.toml"
 }
