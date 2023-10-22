@@ -26,9 +26,6 @@ pub struct StatusBar{
     out: std::io::Stdout,
 }
 
-//unsafe impl Sync for StatusBar {}
-//unsafe impl Send for StatusBar {}
-
 impl StatusBar{
     pub fn add_module(&mut self, module: Box<dyn StatusModule>){
         let mut lock = self.modules.lock().expect("mutex poisoned");
@@ -54,8 +51,6 @@ impl StatusBar{
                 match buf.find('{'){
                     Some(start_idx) =>{
                         let input = &buf.as_str()[start_idx..];
-                        eprintln!("{}", input);
-                        //match Event::from_json(input)  {
                         match serde_json::from_str::<SwayStatusEvent>(input) {
                             Ok(swayevent) => {
                                 let mut l = arc_modules_clone.lock().expect("mutex poisoned");
@@ -77,14 +72,13 @@ impl StatusBar{
         });
     }
 
-    pub fn new() -> StatusBar
+    pub fn new() -> Self
     {
         StatusBar { 
             modules: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
             status_string: String::from(""),
             out: std::io::stdout(),
             module_update_string_buffer: Vec::new(),
-            //free_handles: Vec::new(),
         }
     }
 
@@ -99,13 +93,11 @@ impl StatusBar{
                         name: i.to_string(),
                         update: update,
                     };
-                    let update_string = serde_json::to_string(&u).unwrap();
-                    self.status_string.push_str(update_string.as_str());
-                    self.module_update_string_buffer[i].clear();
-                    self.module_update_string_buffer[i].push_str(update_string.as_str());
+                    self.module_update_string_buffer[i] = serde_json::to_string(&u).unwrap();
                 },
-                None => {self.status_string.push_str(self.module_update_string_buffer[i].as_str());}
+                None => {}
             }
+            self.status_string.push_str(self.module_update_string_buffer[i].as_str());
             self.status_string.push(',');
         }
         self.status_string.push_str("],\n");

@@ -1,5 +1,5 @@
 [package]
-name = "swaystatusrust"
+name = "sway-status-rust"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,7 +13,6 @@ serde_repr = "0.1"
 chrono = "0.4.31"
 toml = "0.4.2"
 sysinfo = "0.29.10"
-battery = "0.7.8"
 
 [build-dependencies]
 cc = "1.0"
