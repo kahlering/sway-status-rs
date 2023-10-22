@@ -30,7 +30,7 @@ impl status_bar::StatusModule for BatteryModule{
         let power_now: f32 = Self::get_property_from_uevent_str(POWER_SUPPLY_POWER_NOW_PROPERTY, uevent_string.as_str()).parse().unwrap();
 
         Some(status_bar::StatusUpdate{
-            full_text: String::from(format!("bat: {:.0}% {}{:.1}W", capacity, if status == "Charging" {'+'} else if status == "Discharging" {'-'} else {'?'}, power_now / 1000000.0)),
+            full_text: String::from(format!("bat {:.0}% {}{:.1}W", capacity, if status == "Charging" {'+'} else if status == "Discharging" {'-'} else {'?'}, power_now / 1000000.0)),
             short_text: None,
             color: None,
             background: None,

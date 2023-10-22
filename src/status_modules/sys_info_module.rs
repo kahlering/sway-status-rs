@@ -121,6 +121,7 @@ impl status_bar::StatusModule for SysInfoModule{
 
         if self.show_cpu{
             self.sys_info.refresh_cpu(); // Refreshing CPU information.
+            sysinfo_string.push_str("CPU ");
             for cpu in self.sys_info.cpus() {
                 sysinfo_string.push(Self::usage_to_char(cpu.cpu_usage()));
             }

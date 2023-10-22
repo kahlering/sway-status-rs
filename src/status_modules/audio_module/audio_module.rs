@@ -27,9 +27,9 @@ impl status_bar::StatusModule for AudioModule {
         self.volume = new_vol;
         let text: String;
         match new_vol{
-            -2 => {text = String::from("Vol: M")},
+            -2 => {text = String::from("Vol M")},
             -1 => {text = String::new()},
-            _ => {text = String::from(format!("Vol: {new_vol}"))}
+            _ => {text = String::from(format!("Vol {new_vol}"))}
         }
         
         Some(status_bar::StatusUpdate{

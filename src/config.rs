@@ -11,7 +11,6 @@ bat_uevent_path = "/sys/class/power_supply/BAT0/uevent"
 status_bar_pos = 1
 
 [modules.date_and_time]
-name = "date_and_time_module"
 format = "%Y/%m/%d %T"
 status_bar_pos = 0
 
