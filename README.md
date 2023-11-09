@@ -2,7 +2,7 @@
 
 # sway-status-rs
 sway-status-rs shows information about the system in the Sway status bar.
-![sway-status-rs](https://github.com/kahlering/sway-status-rs/assets/22997384/1a62fdbc-667a-4398-b8d9-c5a25b4a648e)
+![sway-status-rs](https://github.com/kahlering/sway-status-rs/assets/22997384/8c72db80-85ee-42e5-be16-f54845604127)
 
 ## Installation
 ### Prerequisites
