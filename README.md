@@ -28,9 +28,7 @@ Open the sway config file _~/.config/sway/conf_ and replace the status_command w
 ```
 status_command exec ~/.cargo/bin/sway-status-rs
 ```
-Once you reload the sway config, sway should start displaying the status information.bar {
-    status_command i3status
-}
+Once you reload the sway config, sway should start displaying the status information.
 
 
 ## Writing your own Module
